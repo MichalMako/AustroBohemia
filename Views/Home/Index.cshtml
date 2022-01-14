@@ -1,0 +1,121 @@
+﻿@model IEnumerable<AustroBohemia.Models.BTCPrice>
+
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+	<p>Refresh interval is set to 10 seconds.</p>
+	<table style="width: 100%">
+		<tr>
+			<td style="width: 50%; vertical-align: top;">
+				<table id="btcTable" class="table table-bordered table-striped">
+					<thead>
+						<tr>
+							<th>
+								@Html.DisplayNameFor(m => m.Date)
+							</th>
+							<th>
+								@Html.DisplayNameFor(m => m.Eur)
+							</th>
+							<th>
+								@Html.DisplayNameFor(m => m.Czk)
+							</th>
+						</tr>
+					</thead>
+					<tbody>
+						@if (Model.Count() > 0)
+						{
+							foreach (var btcprice in Model)
+							{
+								<tr>
+									<td>
+										@Html.DisplayFor(m => btcprice.Date)
+									</td>
+									<td>
+										@Html.DisplayFor(m => btcprice.Eur)
+									</td>
+									<td>
+										@Html.DisplayFor(m => btcprice.Czk)
+									</td>
+								</tr>
+							}
+						}
+					</tbody>
+				</table>
+			</td>
+			<td style="width: 50%; vertical-align: top;">
+				<div id="chartContainer" style="height: 370px; width: 100%;"></div>
+				<script src="https://canvasjs.com/assets/script/jquery-1.11.1.min.js"></script>
+				<script src="https://canvasjs.com/assets/script/jquery.canvasjs.min.js"></script>
+			</td>
+		</tr>
+	</table>
+</div>
+
+<script type="text/javascript">
+	var interval = 10000;
+	var dataPoints = [];
+	var chart;
+	setInterval(function () { Update(); }, interval);
+	$(window).load(function ()
+	{
+		chart = new CanvasJS.Chart("chartContainer", {
+			animationEnabled: true,
+			theme: "light2",
+			title: {
+				text: "Evolution of BTC price"
+			},
+			axisY: {
+				title: "In CZK",
+				titleFontSize: 24
+			},
+			data: [{
+				type: "line",
+				yValueFormatString: "CZK#######.##",
+				dataPoints: dataPoints
+			}]
+		});
+	});
+
+	function Update()
+	{
+		$.ajax({
+			url: '/Home/GetBTCPrice',
+			type: 'POST',
+			dataType: 'json',
+			success: function (response)
+			{
+				$(function ()
+				{
+					$.each(response, function (i, item)
+					{
+						var d = new Date(item.date);
+						var dformat = [d.getMonth() + 1,
+							d.getDate(),
+							d.getFullYear()].join('/') + ' ' +
+							[d.getHours(),
+							d.getMinutes().toString().padStart(2, '0'),
+							d.getSeconds().toString().padStart(2, '0')].join(':');
+
+						var $tr = $('<tr>').append(
+							$('<td>').text(dformat),
+							$('<td>').text(item.eur),
+							$('<td>').text(item.czk)
+						).appendTo('#btcTable');
+
+						dataPoints.push({
+							x: d,
+							y: item.czk
+						});
+						chart.render();
+					});
+				});
+			},
+			error: function (req, status, err)
+			{
+				console.log('Something went wrong', status, err);
+			}
+		});
+	}
+</script>
